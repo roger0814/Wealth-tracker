@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="資產總覽">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<title>資產總覽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #13131a;
+  --bg3: #1c1c26;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f5;
+  --text2: rgba(240,240,245,0.55);
+  --text3: rgba(240,240,245,0.3);
+  --green: #00d68f;
+  --green-dim: rgba(0,214,143,0.12);
+  --red: #ff5a5a;
+  --red-dim: rgba(255,90,90,0.12);
+  --blue: #4d9fff;
+  --blue-dim: rgba(77,159,255,0.12);
+  --amber: #ffb340;
+  --amber-dim: rgba(255,179,64,0.12);
+  --purple: #a78bfa;
+  --safe-top: env(safe-area-inset-top, 44px);
+  --safe-bot: env(safe-area-inset-bottom, 34px);
+  --nav-h: 72px;
+  --font: 'DM Sans', -apple-system, sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
+
+/* Layout */
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+#pages { flex: 1; overflow: hidden; position: relative; }
+.page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding-top: calc(var(--safe-top) + 8px); padding-bottom: calc(var(--nav-h) + var(--safe-bot) + 8px); display: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.page.active { display: block; }
+.page-inner { padding: 0 16px; }
+
+/* Nav */
+#nav { position: fixed; bottom: 0; left: 0; right: 0; height: calc(var(--nav-h) + var(--safe-bot)); background: rgba(10,10,15,0.92); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-top: 0.5px solid var(--border2); display: flex; align-items: flex-start; padding-top: 10px; padding-bottom: var(--safe-bot); z-index: 100; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 0; transition: opacity .15s; }
+.nav-item:active { opacity: .6; }
+.nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; position: relative; }
+.nav-icon svg { width: 22px; height: 22px; stroke: var(--text3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s; }
+.nav-item.active .nav-icon svg { stroke: var(--blue); }
+.nav-dot { position: absolute; bottom: -2px; width: 4px; height: 4px; border-radius: 2px; background: var(--blue); opacity: 0; transition: opacity .2s; }
+.nav-item.active .nav-dot { opacity: 1; }
+.nav-label { font-size: 10px; color: var(--text3); transition: color .2s; }
+.nav-item.active .nav-label { color: var(--blue); }
+
+/* Cards */
+.card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 20px; padding: 18px 18px; margin-bottom: 12px; }
+.card-sm { padding: 14px 16px; }
+.section-title { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin: 20px 0 10px; }
+
+/* Hero card */
+.hero { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 24px; padding: 24px 22px 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(77,159,255,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.hero-amount { font-family: var(--mono); font-size: 36px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-bottom: 10px; }
+.hero-change { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 10px; border-radius: 20px; }
+.hero-change.pos { color: var(--green); background: var(--green-dim); }
+.hero-change.neg { color: var(--red); background: var(--red-dim); }
+.hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.hero-stat { background: var(--bg3); border-radius: 14px; padding: 12px 14px; }
+.hero-stat-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.hero-stat-val { font-family: var(--mono); font-size: 17px; font-weight: 500; }
+
+/* Alloc bar */
+.alloc-wrap { margin: 4px 0 12px; }
+.alloc-bar { height: 8px; border-radius: 4px; display: flex; gap: 3px; overflow: hidden; margin-bottom: 10px; }
+.alloc-seg { height: 100%; border-radius: 4px; }
+.alloc-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.alloc-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.alloc-dot { width: 8px; height: 8px; border-radius: 4px; }
+
+/* List rows */
+.row { display: flex; align-items: center; padding: 13px 0; border-bottom: 0.5px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.row-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-right: 12px; }
+.row-main { flex: 1; min-width: 0; }
+.row-title { font-size: 15px; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-sub { font-size: 12px; color: var(--text2); }
+.row-right { text-align: right; flex-shrink: 0; }
+.row-amount { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+.row-pct { font-size: 12px; font-weight: 500; margin-top: 2px; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+
+/* Tags */
+.tag { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
+.tag-blue { background: var(--blue-dim); color: var(--blue); }
+.tag-amber { background: var(--amber-dim); color: var(--amber); }
+.tag-green { background: var(--green-dim); color: var(--green); }
+.tag-red { background: var(--red-dim); color: var(--red); }
+.tag-gray { background: rgba(255,255,255,0.07); color: var(--text2); }
+
+/* Quick add fab */
+#fab { position: fixed; right: 20px; bottom: calc(var(--nav-h) + var(--safe-bot) + 16px); width: 52px; height: 52px; border-radius: 26px; background: var(--blue); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 99; box-shadow: 0 4px 20px rgba(77,159,255,0.4); transition: transform .15s; }
+#fab:active { transform: scale(0.93); }
+#fab svg { width: 22px; height: 22px; stroke: white; stroke-width: 2; fill: none; stroke-linecap: round; }
+
+/* Bottom sheet */
+.sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.sheet-overlay.open { opacity: 1; pointer-events: all; }
+.sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-radius: 28px 28px 0 0; z-index: 201; padding: 12px 20px calc(var(--safe-bot) + 20px); transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1); max-height: 85vh; overflow-y: auto; }
+.sheet.open { transform: translateY(0); }
+.sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border2); margin: 0 auto 20px; }
+.sheet-title { font-size: 18px; font-weight: 500; margin-bottom: 20px; }
+
+/* Form */
+.form-row { margin-bottom: 14px; }
+.form-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.form-input { width: 100%; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: 14px; padding: 13px 16px; font-size: 16px; color: var(--text); font-family: var(--font); outline: none; -webkit-appearance: none; }
+.form-input:focus { border-color: var(--blue); }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-seg { display: flex; background: var(--bg3); border-radius: 12px; padding: 3px; margin-bottom: 14px; }
+.form-seg-btn { flex: 1; padding: 9px; border-radius: 10px; font-size: 14px; text-align: center; cursor: pointer; color: var(--text2); transition: all .15s; font-family: var(--font); }
+.form-seg-btn.active { background: var(--bg); color: var(--text); font-weight: 500; }
+.btn-submit { width: 100%; background: var(--blue); color: white; border: none; border-radius: 16px; padding: 16px; font-size: 16px; font-weight: 500; cursor: pointer; font-family: var(--font); margin-top: 6px; }
+.btn-submit:active { opacity: .85; }
+
+/* Chart bars */
+.mini-chart { display: flex; align-items: flex-end; gap: 4px; height: 50px; margin-top: 12px; }
+.bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; }
+.bar-label { font-size: 10px; color: var(--text3); }
+
+/* Connection items */
+.conn-row { display: flex; align-items: center; padding: 13px 0; border-bottom: 0.5px solid var(--border); }
+.conn-row:last-child { border-bottom: none; }
+.conn-logo { width: 38px; height: 38px; border-radius: 12px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; flex-shrink: 0; }
+.toggle { width: 46px; height: 27px; border-radius: 14px; background: var(--bg3); border: 0.5px solid var(--border2); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
+.toggle.on { background: var(--green); border-color: var(--green); }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 11px; background: white; transition: left .2s; }
+.toggle.on .toggle-thumb { left: 22px; }
+
+/* Tx icon */
+.tx-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 12px; }
+
+/* Animation */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.page.active .card, .page.active .hero { animation: fadeUp .3s ease backwards; }
+.page.active .card:nth-child(2) { animation-delay: .05s; }
+.page.active .card:nth-child(3) { animation-delay: .1s; }
+.page.active .card:nth-child(4) { animation-delay: .15s; }
+
+/* Scrollbar hidden */
+.page::-webkit-scrollbar { display: none; }
+
+/* Status bar spacer */
+.status-bar { height: var(--safe-top); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="pages">
+
+    <!-- PAGE: 總覽 -->
+    <div class="page active" id="pg-home">
+      <div class="page-inner">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-top:8px;">
+          <div>
+            <div style="font-size:13px;color:var(--text2);">早安 👋</div>
+            <div style="font-size:20px;font-weight:500;">我的資產</div>
+          </div>
+          <div style="width:38px;height:38px;border-radius:19px;background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="goPage('settings')">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text2);fill:none;stroke-width:1.5;stroke-linecap:round;"><circle cx="12" cy="8" r="1.5" fill="var(--text2)"/><circle cx="12" cy="12" r="1.5" fill="var(--text2)"/><circle cx="12" cy="16" r="1.5" fill="var(--text2)"/></svg>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-label">總資產淨值</div>
+          <div class="hero-amount" id="h-total">NT$3,847,520</div>
+          <div class="hero-change pos">↑ +2.4%&nbsp; 本月</div>
+          <div class="hero-grid">
+            <div class="hero-stat">
+              <div class="hero-stat-label">本月收入</div>
+              <div class="hero-stat-val pos">+95,000</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-label">本月支出</div>
+              <div class="hero-stat-val neg">-60,800</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:14px;font-weight:500;margin-bottom:12px;">資產配置</div>
+          <div class="alloc-wrap">
+            <div class="alloc-bar">
+              <div class="alloc-seg" style="width:47%;background:var(--blue);"></div>
+              <div class="alloc-seg" style="width:11%;background:var(--amber);"></div>
+              <div class="alloc-seg" style="width:38%;background:var(--green);"></div>
+              <div class="alloc-seg" style="width:4%;background:rgba(255,255,255,0.2);"></div>
+            </div>
+            <div class="alloc-legend">
+              <div class="alloc-legend-item"><div class="alloc-dot" style="background:var(--blue);"></div>美股 47%</div>
+              <div class="alloc-legend-item"><div class="alloc-dot" style="background:var(--amber);"></div>加密 11%</div>
+              <div class="alloc-legend-item"><div class="alloc-dot" style="background:var(--green);"></div>銀行 38%</div>
+              <div class="alloc-legend-item"><div class="alloc-dot" style="background:rgba(255,255,255,0.2);"></div>其他 4%</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;">走勢 — 近6個月 (萬元)</div>
+          <div class="mini-chart" id="trendChart"></div>
+        </div>
+
+        <div class="section-title">最近交易</div>
+        <div class="card card-sm" id="recent-txs"></div>
+
+      </div>
+    </div>
+
+    <!-- PAGE: 投資 -->
+    <div class="page" id="pg-invest">
+      <div class="page-inner">
+        <div style="font-size:22px;font-weight:500;margin:12px 0 18px;">投資組合</div>
+
+        <div class="card" style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+            <div style="font-size:13px;color:var(--text2);">投資總值</div>
+            <span class="tag tag-blue">美股 + 加密</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:30px;font-weight:500;">NT$2,237,100</div>
+          <div style="font-size:13px;color:var(--green);margin-top:4px;">未實現損益 +NT$287,100 (+14.7%)</div>
+        </div>
+
+        <div class="section-title">美股 — 國泰複委託</div>
+        <div class="card card-sm" id="stock-list"></div>
+
+        <div class="section-title">加密貨幣</div>
+        <div class="card card-sm" id="crypto-list"></div>
+
+      </div>
+    </div>
+
+    <!-- PAGE: 記帳 -->
+    <div class="page" id="pg-cashflow">
+      <div class="page-inner">
+        <div style="font-size:22px;font-weight:500;margin:12px 0 4px;">收支記帳</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <div style="flex:1;background:var(--green-dim);border-radius:16px;padding:14px 16px;">
+            <div style="font-size:12px;color:var(--green);margin-bottom:4px;">本月收入</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:500;color:var(--green);">95,000</div>
+          </div>
+          <div style="flex:1;background:var(--red-dim);border-radius:16px;padding:14px 16px;">
+            <div style="font-size:12px;color:var(--red);margin-bottom:4px;">本月支出</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:500;color:var(--red);">60,800</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px;" id="tx-filter">
+          <button class="tag tag-blue" onclick="filterTx('all',this)" style="padding:7px 14px;cursor:pointer;font-size:13px;">全部</button>
+          <button class="tag tag-gray" onclick="filterTx('income',this)" style="padding:7px 14px;cursor:pointer;font-size:13px;">收入</button>
+          <button class="tag tag-gray" onclick="filterTx('expense',this)" style="padding:7px 14px;cursor:pointer;font-size:13px;">支出</button>
+        </div>
+
+        <div class="card card-sm" id="tx-list"></div>
+
+        <div class="section-title">電子載具</div>
+        <div class="card" onclick="showCarrierSheet()" style="cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:14px;background:var(--amber-dim);display:flex;align-items:center;justify-content:center;font-size:22px;">🧾</div>
+            <div>
+              <div style="font-weight:500;margin-bottom:2px;">財政部電子載具</div>
+              <div style="font-size:12px;color:var(--text2);">連結後自動匯入發票消費</div>
+            </div>
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--text3);fill:none;stroke-width:2;margin-left:auto;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: 銀行 -->
+    <div class="page" id="pg-bank">
+      <div class="page-inner">
+        <div style="font-size:22px;font-weight:500;margin:12px 0 4px;">銀行帳戶</div>
+
+        <div class="card" style="margin-bottom:6px;">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">銀行存款合計</div>
+          <div style="font-family:var(--mono);font-size:30px;font-weight:500;">NT$1,450,020</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:4px;">4 個帳戶</div>
+        </div>
+
+        <div class="section-title">帳戶明細</div>
+        <div class="card card-sm" id="bank-list"></div>
+
+        <div class="section-title">連結設定</div>
+        <div class="card card-sm" id="bank-conn-list"></div>
+
+      </div>
+    </div>
+
+    <!-- PAGE: 設定 -->
+    <div class="page" id="pg-settings">
+      <div class="page-inner">
+        <div style="font-size:22px;font-weight:500;margin:12px 0 18px;">設定</div>
+
+        <div class="section-title">整合服務</div>
+        <div class="card card-sm">
+          <div id="all-conn-list"></div>
+        </div>
+
+        <div class="section-title">安全</div>
+        <div class="card" style="font-size:13px;color:var(--text2);line-height:1.7;">
+          所有連結採用唯讀 API 金鑰，僅供查詢餘額與交易記錄，無法執行交易操作。資料加密儲存於本機，不上傳至第三方伺服器。
+        </div>
+
+        <div class="section-title">加到主畫面</div>
+        <div class="card" style="cursor:pointer;" id="pwa-card">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="font-size:28px;">📲</div>
+            <div>
+              <div style="font-weight:500;margin-bottom:3px;">安裝為 App</div>
+              <div style="font-size:12px;color:var(--text2);">點此查看如何加到 iPhone 主畫面</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="pwa-instructions" style="display:none;" class="card" style="margin-top:0;">
+          <div style="font-size:14px;line-height:1.8;color:var(--text2);">
+            <div style="color:var(--text);font-weight:500;margin-bottom:10px;">安裝步驟 (Safari)</div>
+            <div>1. 用 Safari 開啟此頁面</div>
+            <div>2. 點選底部 <strong style="color:var(--text);">分享</strong> 按鈕 ⬆️</div>
+            <div>3. 選擇「<strong style="color:var(--text);">加入主畫面</strong>」</div>
+            <div>4. 點「新增」完成</div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text3);">安裝後會以全螢幕 App 模式開啟，體驗與原生 App 相同。</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /pages -->
+
+  <!-- Bottom nav -->
+  <div id="nav">
+    <div class="nav-item active" onclick="goPage('home')" id="nav-home">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-label">總覽</div>
+    </div>
+    <div class="nav-item" onclick="goPage('invest')" id="nav-invest">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-label">投資</div>
+    </div>
+    <div class="nav-item" onclick="goPage('cashflow')" id="nav-cashflow">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-label">記帳</div>
+    </div>
+    <div class="nav-item" onclick="goPage('bank')" id="nav-bank">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-label">銀行</div>
+    </div>
+    <div class="nav-item" onclick="goPage('settings')" id="nav-settings">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-label">設定</div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<div id="fab" onclick="showAddSheet()">
+  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</div>
+
+<!-- Add TX Sheet -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="add-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">新增收支</div>
+  <div class="form-seg" id="tx-type-seg">
+    <div class="form-seg-btn active" onclick="setTxType('expense',this)">支出</div>
+    <div class="form-seg-btn" onclick="setTxType('income',this)">收入</div>
+  </div>
+  <div class="form-row">
+    <div class="form-label">金額 (NT$)</div>
+    <input class="form-input" type="number" inputmode="decimal" placeholder="0" id="in-amt" style="font-family:var(--mono);font-size:28px;text-align:center;">
+  </div>
+  <div class="form-2col">
+    <div class="form-row">
+      <div class="form-label">類別</div>
+      <select class="form-input" id="in-cat" style="font-size:15px;">
+        <option>餐飲</option><option>交通</option><option>購物</option><option>娛樂</option>
+        <option>醫療</option><option>薪資</option><option>投資收益</option><option>其他</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-label">日期</div>
+      <input class="form-input" type="date" id="in-date" style="font-size:15px;">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-label">備註</div>
+    <input class="form-input" type="text" placeholder="描述（選填）" id="in-note">
+  </div>
+  <button class="btn-submit" onclick="submitTx()">新增</button>
+</div>
+
+<!-- Carrier Sheet -->
+<div class="sheet" id="carrier-sheet" style="z-index:202;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">連結電子載具</div>
+  <div class="form-row">
+    <div class="form-label">載具條碼</div>
+    <input class="form-input" type="text" placeholder="/XXXXXXXX" id="carrier-input" style="letter-spacing:.1em;text-transform:uppercase;">
+  </div>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;">連結財政部電子發票平台，自動匯入消費記錄並分類。</div>
+  <button class="btn-submit" onclick="connectCarrier()">連結載具</button>
+</div>
+
+<script>
+// ─── Data ───
+const state = {
+  txType: 'expense',
+  txFilter: 'all',
+  stocks: [
+    { t:'NVDA', s:5, cost:780, cur:1200 },
+    { t:'AAPL', s:10, cost:165, cur:192 },
+    { t:'VOO', s:8, cost:420, cur:510 },
+    { t:'MSFT', s:4, cost:310, cur:425 },
+    { t:'AMZN', s:6, cost:155, cur:196 },
+    { t:'META', s:3, cost:290, cur:580 },
+  ],
+  crypto: [
+    { c:'BTC', amt:0.15, cost:58000, cur:103000, ex:'MAX' },
+    { c:'ETH', amt:1.2, cost:2800, cur:2650, ex:'MAX' },
+    { c:'USDT', amt:3200, cost:1, cur:1, ex:'Binance' },
+  ],
+  banks: [
+    { name:'台新銀行', last4:'8821', type:'活期', balance:320000, on:true },
+    { name:'國泰世華', last4:'4412', type:'活期', balance:500000, on:true },
+    { name:'中國信託', last4:'7730', type:'定期', balance:600000, on:false },
+    { name:'玉山銀行', last4:'2291', type:'數位', balance:30020, on:true },
+  ],
+  txs: [
+    { type:'income',  cat:'薪資',    amt:82000, date:'06/06', note:'6月薪資' },
+    { type:'expense', cat:'投資',    amt:48200, date:'06/06', note:'NVDA 買入' },
+    { type:'income',  cat:'股息',    amt:4500,  date:'06/04', note:'ETF 股息' },
+    { type:'expense', cat:'購物',    amt:3450,  date:'06/04', note:'信用卡消費' },
+    { type:'expense', cat:'餐飲',    amt:1200,  date:'06/03', note:'晚餐' },
+    { type:'expense', cat:'交通',    amt:980,   date:'06/03', note:'悠遊卡' },
+    { type:'income',  cat:'加班費',  amt:5500,  date:'06/02', note:'加班費' },
+    { type:'expense', cat:'娛樂',    amt:2200,  date:'06/01', note:'串流訂閱' },
+  ],
+  conns: [
+    { name:'國泰複委託', icon:'📈', type:'券商', on:true },
+    { name:'MAX 交易所', icon:'₿',  type:'交易所', on:true },
+    { name:'幣安 Binance', icon:'🔶', type:'交易所', on:true },
+    { name:'台新銀行', icon:'🏦', type:'銀行', on:true },
+    { name:'國泰世華', icon:'🏦', type:'銀行', on:true },
+    { name:'中國信託', icon:'🏦', type:'銀行', on:false },
+    { name:'玉山銀行', icon:'🏦', type:'銀行', on:true },
+    { name:'OKX', icon:'⬡', type:'交易所', on:false },
+  ]
+};
+const USD = 32.4;
+function nt(n){ return 'NT$' + Math.round(n).toLocaleString(); }
+function pct(a,b){ return ((a-b)/b*100).toFixed(1); }
+
+// ─── Navigation ───
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+  document.getElementById('fab').style.display = id==='cashflow' ? 'flex' : (id==='home'?'flex':'none');
+}
+
+// ─── Trend chart ───
+function buildTrend(){
+  const vals = [310,328,335,352,370,384];
+  const labels = ['1月','2月','3月','4月','5月','6月'];
+  const max = Math.max(...vals), min = Math.min(...vals)-10;
+  const el = document.getElementById('trendChart');
+  el.innerHTML = vals.map((v,i)=>{
+    const h = Math.round((v-min)/(max-min)*100);
+    return `<div class="bar-wrap"><div class="bar" style="height:${h}%;background:${i===5?'var(--blue)':'rgba(77,159,255,0.3)'};"></div><div class="bar-label">${labels[i]}</div></div>`;
+  }).join('');
+}
+
+// ─── Recent txs ───
+function buildRecentTxs(){
+  const catIcon = {餐飲:'🍜',交通:'🚇',購物:'🛍',娛樂:'🎬',薪資:'💰',股息:'📊',加班費:'💼',投資:'📈',醫療:'💊',其他:'📌'};
+  const el = document.getElementById('recent-txs');
+  el.innerHTML = state.txs.slice(0,5).map(t=>`
+    <div class="row">
+      <div class="tx-icon" style="background:${t.type==='income'?'var(--green-dim)':'var(--red-dim)'};">${catIcon[t.cat]||'📌'}</div>
+      <div class="row-main"><div class="row-title">${t.note}</div><div class="row-sub">${t.cat} · ${t.date}</div></div>
+      <div class="row-right"><div class="row-amount ${t.type==='income'?'pos':'neg'}">${t.type==='income'?'+':'-'}${Math.round(t.amt).toLocaleString()}</div></div>
+    </div>`).join('');
+}
+
+// ─── Stocks ───
+function buildStocks(){
+  const el = document.getElementById('stock-list');
+  const total = state.stocks.reduce((a,s)=>a+s.cur*s.s*USD,0);
+  el.innerHTML = state.stocks.map(s=>{
+    const cur = s.cur*s.s*USD, cost = s.cost*s.s*USD;
+    const p = +pct(cur,cost);
+    const w = (cur/total*100).toFixed(0);
+    return `<div class="row">
+      <div class="row-icon" style="background:var(--blue-dim);color:var(--blue);font-family:var(--mono);font-size:13px;font-weight:500;">${s.t.slice(0,4)}</div>
+      <div class="row-main"><div class="row-title">${s.t}</div><div class="row-sub">${s.s} 股 · 佔倉 ${w}%</div></div>
+      <div class="row-right"><div class="row-amount">${nt(cur)}</div><div class="row-pct ${p>=0?'pos':'neg'}">${p>=0?'+':''}${p}%</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Crypto ───
+function buildCrypto(){
+  const el = document.getElementById('crypto-list');
+  el.innerHTML = state.crypto.map(c=>{
+    const cur = c.cur*c.amt*USD, cost = c.cost*c.amt*USD;
+    const p = cost>0 ? +pct(cur,cost) : 0;
+    return `<div class="row">
+      <div class="row-icon" style="background:var(--amber-dim);color:var(--amber);font-family:var(--mono);font-size:13px;font-weight:500;">${c.c}</div>
+      <div class="row-main"><div class="row-title">${c.c}</div><div class="row-sub">${c.amt} ${c.c} · ${c.ex}</div></div>
+      <div class="row-right"><div class="row-amount">${nt(cur)}</div><div class="row-pct ${p>=0?'pos':'neg'}">${p>=0?'+':''}${p.toFixed(1)}%</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Banks ───
+function buildBanks(){
+  const el = document.getElementById('bank-list');
+  const typeColor = {活期:'var(--green-dim)',定期:'var(--blue-dim)',數位:'var(--purple)',外幣:'var(--amber-dim)'};
+  el.innerHTML = state.banks.map(b=>`
+    <div class="row">
+      <div class="row-icon" style="background:${typeColor[b.type]||'var(--bg3)'};font-size:20px;">🏦</div>
+      <div class="row-main"><div class="row-title">${b.name}</div><div class="row-sub">${b.type} ····${b.last4}</div></div>
+      <div class="row-right"><div class="row-amount">${nt(b.balance)}</div></div>
+    </div>`).join('');
+
+  const connEl = document.getElementById('bank-conn-list');
+  connEl.innerHTML = state.banks.map((b,i)=>`
+    <div class="conn-row">
+      <div class="conn-logo">🏦</div>
+      <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${b.name}</div><div style="font-size:12px;color:var(--text2);">Open Banking</div></div>
+      <div class="toggle ${b.on?'on':''}" onclick="toggleBank(${i})"><div class="toggle-thumb"></div></div>
+    </div>`).join('');
+}
+
+function toggleBank(i){
+  state.banks[i].on = !state.banks[i].on;
+  buildBanks();
+}
+
+// ─── Connections ───
+function buildConns(){
+  const el = document.getElementById('all-conn-list');
+  el.innerHTML = state.conns.map((c,i)=>`
+    <div class="conn-row">
+      <div class="conn-logo">${c.icon}</div>
+      <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${c.name}</div><div style="font-size:12px;color:var(--text2);">${c.type}</div></div>
+      <div class="toggle ${c.on?'on':''}" onclick="toggleConn(${i})"><div class="toggle-thumb"></div></div>
+    </div>`).join('');
+}
+
+function toggleConn(i){
+  state.conns[i].on = !state.conns[i].on;
+  buildConns();
+}
+
+// ─── Transactions ───
+function buildTxs(){
+  const catIcon = {餐飲:'🍜',交通:'🚇',購物:'🛍',娛樂:'🎬',薪資:'💰',股息:'📊',加班費:'💼',投資:'📈',醫療:'💊',其他:'📌'};
+  const filtered = state.txFilter==='all' ? state.txs : state.txs.filter(t=>t.type===state.txFilter);
+  const el = document.getElementById('tx-list');
+  el.innerHTML = filtered.map(t=>`
+    <div class="row">
+      <div class="tx-icon" style="background:${t.type==='income'?'var(--green-dim)':'var(--red-dim)'};">${catIcon[t.cat]||'📌'}</div>
+      <div class="row-main"><div class="row-title">${t.note}</div><div class="row-sub">${t.cat} · ${t.date}</div></div>
+      <div class="row-right"><div class="row-amount ${t.type==='income'?'pos':'neg'}">${t.type==='income'?'+':'-'}${Math.round(t.amt).toLocaleString()}</div></div>
+    </div>`).join('');
+}
+
+function filterTx(f, btn){
+  state.txFilter = f;
+  document.querySelectorAll('#tx-filter button').forEach(b=>{b.className='tag tag-gray';b.style.cssText='padding:7px 14px;cursor:pointer;font-size:13px;';});
+  btn.className='tag tag-blue'; btn.style.cssText='padding:7px 14px;cursor:pointer;font-size:13px;';
+  buildTxs();
+}
+
+// ─── Add TX sheet ───
+function showAddSheet(){
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('add-sheet').classList.add('open');
+}
+function closeSheet(){
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('add-sheet').classList.remove('open');
+  document.getElementById('carrier-sheet').classList.remove('open');
+}
+function setTxType(type, btn){
+  state.txType = type;
+  document.querySelectorAll('.form-seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function submitTx(){
+  const amt = parseFloat(document.getElementById('in-amt').value)||0;
+  if(!amt){ document.getElementById('in-amt').focus(); return; }
+  const cat = document.getElementById('in-cat').value;
+  const note = document.getElementById('in-note').value || cat;
+  const d = new Date(); const date = `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+  state.txs.unshift({ type:state.txType, cat, amt, date, note });
+  closeSheet();
+  buildTxs(); buildRecentTxs();
+  document.getElementById('in-amt').value='';
+  document.getElementById('in-note').value='';
+}
+
+function showCarrierSheet(){
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('carrier-sheet').classList.add('open');
+}
+function connectCarrier(){
+  const v = document.getElementById('carrier-input').value;
+  if(!v){ document.getElementById('carrier-input').focus(); return; }
+  alert('載具連結成功！將自動匯入近3個月發票記錄。');
+  closeSheet();
+}
+
+// ─── PWA info ───
+document.getElementById('pwa-card').addEventListener('click',()=>{
+  const el = document.getElementById('pwa-instructions');
+  el.style.display = el.style.display==='none'?'block':'none';
+});
+
+// ─── Init ───
+document.getElementById('in-date').valueAsDate = new Date();
+buildTrend();
+buildRecentTxs();
+buildStocks();
+buildCrypto();
+buildBanks();
+buildConns();
+buildTxs();
+</script>
+</body>
+</html>
